@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互动样品展示工坊</title>
+    <!-- Tailwind CSS 用于快速精美布局 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 用于丝滑的交互状态管理 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        /* 模拟样品的纹理遮罩层效果 */
+        .texture-overlay {
+            mix-blend-mode: multiply;
+            opacity: 0.4;
+        }
+        .texture-matte { background-image: radial-gradient(#ccc 1px, transparent 0); background-size: 4px 4px; }
+        .texture-brushed { background-image: linear-gradient(90deg, rgba(255,255,255,.1) 50%, transparent 50%), linear-gradient(rgba(0,0,0,.05) 50%, transparent 50%); background-size: 6px 6px; }
+        .texture-wood { background-image: repeating-linear-gradient(0deg, transparent, transparent 8px, rgba(0,0,0,0.03) 8px, rgba(0,0,0,0.03) 16px); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+<div id="app" class="min-h-screen flex flex-col">
+    <!-- 头部导航 -->
+    <header class="bg-white border-b border-slate-200 py-4 px-6 flex justify-between items-center sticky top-0 z-50">
+        <h1 class="text-xl font-bold tracking-wide text-slate-900">✨ 数字化样品美学工坊</h1>
+        <div class="space-x-4 text-sm font-medium">
+            <a href="#workshop" class="text-indigo-600 hover:text-indigo-800">样品自定义</a>
+            <a href="#gallery" class="text-slate-500 hover:text-slate-800">成品搭配灵感</a>
+        </div>
+    </header>
+
+    <!-- 主体区域 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-16">
+        
+        <!-- SECTION 1: 样品自定义工坊 -->
+        <section id="workshop" class="scroll-mt-20">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-900">01 样品自定义工坊</h2>
+                <p class="text-sm text-slate-500 mt-1">自由组合颜色与物理纹理，实时预览成品卓越质感。</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- 左侧：大屏互动样品预览区 -->
+                <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 flex flex-col justify-between shadow-sm">
+                    <div class="relative w-full aspect-[4/3] rounded-xl overflow-hidden shadow-inner flex items-center justify-center transition-all duration-500"
+                         :style="{ backgroundColor: currentConfig.color.hex }">
+                        
+                        <!-- 动态纹理遮罩 -->
+                        <div class="absolute inset-0 texture-overlay" :class="'texture-' + currentConfig.texture.id"></div>
+                        
+                        <!-- 材质光影效果模拟 -->
+                        <div class="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/20 pointer-events-none"></div>
+
+                        <!-- 样品信息浮层 -->
+                        <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg text-xs space-y-0.5 shadow-sm border border-black/5">
+                            <p class="font-bold text-slate-900">{{ currentConfig.color.name }} × {{ currentConfig.texture.name }}</p>
+                            <p class="text-slate-500 uppercase font-mono">{{ currentConfig.color.hex }}</p>
+                        </div>
+                    </div>
+
+                    <!-- 质感动态描述 -->
+                    <div class="mt-6 bg-slate-50 rounded-xl p-4 border border-slate-200">
+                        <h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">设计美学阐述</h4>
+                        <p class="text-sm text-slate-700 leading-relaxed transition-all duration-300">
+                            {{ activeDescription }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 右侧：控制面板与 AI 助手 -->
+                <div class="lg:col-span-5 space-y-6">
+                    <!-- 选项 1: 基础色库 -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-900 mb-3">1. 选择标准色彩</h3>
+                        <div class="grid grid-cols-5 gap-3">
+                            <button v-for="color in colors" :key="color.hex"
+                                    @click="currentConfig.color = color"
+                                    class="w-full aspect-square rounded-xl border-2 transition-all relative group"
+                                    :class="currentConfig.color.hex === color.hex ? 'border-indigo-600 scale-105 shadow-md' : 'border-transparent hover:scale-105'"
+                                    :style="{ backgroundColor: color.hex }"
+                                    :title="color.name">
+                                <span class="absolute inset-0 flex items-center justify-center text-white text-xs drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity">✓</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 选项 2: 表面工艺/纹理 -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-900 mb-3">2. 选择表面处理工艺</h3>
+                        <div class="space-y-2">
+                            <button v-for="tex in textures" :key="tex.id"
+                                    @click="currentConfig.texture = tex"
+                                    class="w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left"
+                                    :class="currentConfig.texture.id === tex.id ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 font-medium shadow-sm' : 'border-slate-200 hover:bg-slate-50 text-slate-700'">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 rounded bg-slate-200 border border-slate-300 overflow-hidden relative">
+                                        <div class="absolute inset-0 texture-overlay" :class="'texture-' + tex.id"></div>
+                                    </div>
+                                    <span class="text-sm">{{ tex.name }}</span>
+                                </div>
+                                <span class="text-xs text-slate-400 font-mono">{{ tex.spec }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 选项 3: AI 灵感配色调色盘 -->
+                    <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg space-y-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg">🤖</span>
+                            <h3 class="text-sm font-bold tracking-wide">AI 流行趋势高定调色</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-normal">没有满意的颜色？告诉 AI 您的场景（如：“高档法式烘焙店”、“侘寂风极简茶室”），由大模型实时推演定制配色。</p>
+                        
+                        <div class="flex space-x-2">
+                            <input v-model="aiPrompt" type="text" 
+                                   placeholder="例如：极简奢华的奶油风..." 
+                                   class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                                   @keyup.enter="askAI">
+                            <button @click="askAI" :disabled="aiLoading"
+                                    class="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                                {{ aiLoading ? '推演中...' : '推荐' }}
+                            </button>
+                        </div>
+
+                        <!-- AI 推荐反馈 -->
+                        <div v-if="aiResultColor" class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex items-center justify-between animate-fade-in">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg border border-white/20" :style="{ backgroundColor: aiResultColor.hex }"></div>
+                                <div>
+                                    <p class="text-xs font-bold text-white">{{ aiResultColor.name }}</p>
+                                    <p class="text-[10px] text-indigo-400 font-mono">{{ aiResultColor.hex }}</p>
+                                </div>
+                            </div>
+                            <button @click="applyAIColor" class="bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 px-2.5 py-1 rounded-md text-xs font-medium border border-indigo-500/30 transition-colors">
+                                应用到样品
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- SECTION 2: 经典成品灵感集 -->
+        <section id="gallery" class="scroll-mt-20">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-900">02 经典成品搭配展示</h2>
+                <p class="text-sm text-slate-500 mt-1">优秀完工案例及空间实景参考（可点击加载相应样板配置）。</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 预留的高级图片占位卡片 -->
+                <div v-for="product in products" :key="product.id" 
+                     class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+                    <div class="relative w-full aspect-[4/3] bg-slate-100 flex items-center justify-center border-b border-slate-100 overflow-hidden">
+                        <!-- ⚠️ 后续替换为真实图片：将 src 绑定到你的成品图路径 -->
+                        <div class="text-slate-400 text-center p-4">
+                            <span class="text-3xl block mb-2">🖼️</span>
+                            <p class="text-xs font-medium">📷 [ 现成完工图片占位符 ]</p>
+                            <p class="text-[10px] text-slate-400 font-mono mt-1">{{ product.imagePlaceholder }}</p>
+                        </div>
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button @click="loadProductPreset(product)" class="bg-white text-slate-900 px-4 py-2 rounded-xl text-xs font-bold shadow-md hover:scale-105 transition-transform">
+                                拆解此款配色方案
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4 space-y-1.5">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-slate-900 text-base">{{ product.name }}</h4>
+                            <span class="bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-0.5 rounded-full">{{ product.tag }}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-normal">{{ product.desc }}</p>
+                        <div class="pt-2 flex items-center space-x-2 text-[11px] text-slate-400">
+                            <span class="inline-block w-2 h-2 rounded-full" :style="{ backgroundColor: product.color.hex }"></span>
+                            <span>{{ product.color.name }}</span>
+                            <span>•</span>
+                            <span>{{ product.texture.name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+        © 2026 数字化高端建材展厅 • 基于平板展示优化
+    </footer>
+</div>
+
+<script>
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+        setup() {
+            // 基础色库数据
+            const colors = ref([
+                { name: '燕麦暮白', hex: '#F2EFE9', desc: '温柔内敛的色调，为空间注入明亮而解压的轻盈感。' },
+                { name: '冷杉青黛', hex: '#2F4F4F', desc: '深邃高贵的森林底色，极具理性与静谧的艺术张力。' },
+                { name: '曜石炭黑', hex: '#232526', desc: '纯粹沉稳的极简黑，完美塑造硬朗锋利的现代工业风骨。' },
+                { name: '微醺暖驼', hex: '#C5A880', desc: '自带温度的大地色，散发着优雅高档的典雅奢华质感。' },
+                { name: '波特红酒', hex: '#722F37', desc: '复古摩登的尊贵红，在戏剧性与内敛间达到精妙平衡。' }
+            ]);
+
+            // 表面工艺/纹理数据
+            const textures = ref([
+                { id: 'matte', name: '微晶哑面', spec: 'Matte Face', desc: '触感如婴儿肌肤般细腻，吸光率高，呈现极其内敛的轻奢哑光视觉，不易留下指纹。' },
+                { id: 'brushed', name: '丝理拉丝', spec: 'Brushed', desc: '带有微观的平行金属拉丝肌理，随光线角度变幻折射出冷冽的高科技秩序感与精密感。' },
+                { id: 'wood', name: '微刻木纹', spec: 'Natural Grain', desc: '模拟天然年轮与导管的凹凸错落，兼具木质的有机温度与现代复合材料的稳定耐久。' }
+            ]);
+
+            // 当前选中的样品配置
+            const currentConfig = ref({
+                color: colors.value[0],
+                texture: textures.value[0]
+            });
+
+            // 动态质感美学描述算法
+            const activeDescription = computed(() => {
+                return `【${currentConfig.value.color.name}】搭配【${currentConfig.value.texture.name}】：${currentConfig.value.color.desc}${currentConfig.value.texture.desc} 这种组合特别适合应用于高端商业空间或前沿住宅的视觉焦点区域。`;
+            });
+
+            // AI 助手逻辑
+            const aiPrompt = ref('');
+            const aiLoading = ref(false);
+            const aiResultColor = ref(null);
+
+            // 简易 LLM 接入函数（此结构可以直接兼容任意 OpenAI 标准接口）
+            const askAI = async () => {
+                if (!aiPrompt.value.trim()) return;
+                aiLoading.value = true;
+                
+                try {
+                    /* 
+                       💡 生产环境配置说明：
+                       你可以直接对接 OpenAI / 智谱AI / DeepSeek 等 API。
+                       此处使用 mock 逻辑模拟大模型从自然语言推理出时尚配色的过程。
+                    */
+                    await new Promise(resolve => setTimeout(resolve, 1200)); // 模拟网络延迟
+                    
+                    // 模拟大模型根据输入词做语义理解与颜色推导
+                    const promptText = aiPrompt.value.toLowerCase();
+                    if (promptText.includes('奶油') || promptText.includes('法式')) {
+                        aiResultColor.value = { name: 'AI定制：暖樱奶油棕', hex: '#EADBC8', desc: '汲取自浪漫法式烘焙坊，具备高度的包裹感与治愈气息。' };
+                    } else if (promptText.includes('科技') || promptText.includes('赛博') || promptText.includes('冷')) {
+                        aiResultColor.value = { name: 'AI定制：钛空幻影蓝', hex: '#4A5568', desc: '迎合科技极简趋势，传达理智、克制且前卫的未来氛围。' };
+                    } else {
+                        // 随机趋势生成
+                        const hexes = ['#8E9A86', '#5C3D2E', '#D1B48C', '#483D8B'];
+                        const names = ['AI定制：迷雾苔原绿', 'AI定制：深烘浓缩木啡', 'AI定制：威尼斯琥珀', 'AI定制：午夜微光紫'];
+                        const idx = Math.floor(Math.random() * hexes.length);
+                        aiResultColor.value = { name: names[idx], hex: hexes[idx], desc: '结合了2026年度米兰设计周流行色彩趋势演变而来的高定色。' };
+                    }
+                } catch (error) {
+                    console.error("AI 调色盘服务异常", error);
+                } finally {
+                    aiLoading.value = false;
+                }
+            };
+
+            const applyAIColor = () => {
+                if (aiResultColor.value) {
+                    currentConfig.value.color = { ...aiResultColor.value };
+                    aiPrompt.value = '';
+                    aiResultColor.value = null;
+                }
+            };
+
+            // SECTION 2: 现成产品搭配数据（优秀产品展示）
+            const products = ref([
+                { id: 1, name: '“极光”极简极窄橱柜', tag: '展厅爆款', desc: '全无拉手设计，采用哑面拉丝融合冷色系，适合现代开放式厨房。', color: colors.value[2], texture: textures.value[1], imagePlaceholder: 'kitchen_showcase_01.jpg' },
+                { id: 2, name: '“日和”侘寂风茶室背景墙', tag: '高端定制', desc: '大面积温暖色块结合天然微刻木纹，给空间带来松弛舒适的东方禅意。', color: colors.value[0], texture: textures.value[2], imagePlaceholder: 'zen_living_02.jpg' },
+                { id: 3, name: '“赫本”复古高级衣帽间', tag: '设计师推荐', desc: '优雅的酒红与高光肌理交织，在柔和射灯下彰显强烈的主人性格与奢华尊贵感。', color: colors.value[4], texture: textures.value[0], imagePlaceholder: 'wardrobe_luxury_03.jpg' }
+            ]);
+
+            const loadProductPreset = (product) => {
+                currentConfig.value.color = product.color;
+                currentConfig.value.texture = product.texture;
+                // 滚动回顶部工坊
+                document.getElementById('workshop').scrollIntoView({ behavior: 'smooth' });
+            };
+
+            return {
+                colors,
+                textures,
+                currentConfig,
+                activeDescription,
+                aiPrompt,
+                aiLoading,
+                aiResultColor,
+                askAI,
+                applyAIColor,
+                products,
+                loadProductPreset
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
